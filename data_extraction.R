@@ -42,16 +42,19 @@ for (i in 1:nrow(traits)){
 #load in coral traits species list for ID 
 species_list<-read.csv('species.csv')
 
+species$master_species<-as.character(species$master_species)
 
 #dummy data
-species<- c('Acanthastrea brevis','Acanthastrea echinata','Acanthastrea hemprichi')
+species<- read.csv('survey_species.csv')
+species<-species[,2]
+species<-as.character(species)
 
 #filter species by species list 
 species_filter<- species_list[which(species_list$master_species %in% species),]
 
 species<-species_filter[,c(1,2)]
 
-species$master_species<-as.character(species$master_species)
+
 
 
 #make the https strings for extraction
@@ -70,3 +73,5 @@ for (i in 1:nrow(species)){
   name<- read.csv(strings_sp[i,2], as.is=TRUE)
   assign(paste0("data_", species[i,2]), name)
 }
+
+
