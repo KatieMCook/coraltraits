@@ -74,4 +74,18 @@ for (i in 1:nrow(species)){
   assign(paste0("data_", species[i,2]), name)
 }
 
+#merge
+# group into list so more mangagable 
+sp_trait_list<-lapply(ls(pattern='data_'),get)
 
+#bind list together
+length(sp_trait_list)
+
+x<-data.frame(nrow=1, ncol=25)
+
+for (i in 1:length(sp_trait_list)){
+  
+}
+
+
+  

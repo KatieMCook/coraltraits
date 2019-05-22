@@ -2,7 +2,8 @@
 library(dplyr)
 library(reshape2)
 library(tidyr)
-library(plyr)
+
+
 
 setwd("S:/Beger group/Katie Cook/Japan_data/coraltraits")
 
@@ -257,9 +258,185 @@ which(duplicates2$specie_name=="Porites okinawensis")
 which(duplicates2$specie_name=="Stylaraea punctata"  )     #ok they all have no depth info in both depth lower/upper and depths. 
 
 
+#check growth rates
+growthrate_dup<-duplicates2[c(which(duplicates2$trait_name=='Growth rate')),]
+head(growthrate_dup)
+
+#FINISH!!! 
+growthrate_dup$value<-as.numeric(growthrate_dup$value)
+growthrate_dup$specie_name<-as.factor(growthrate_dup$specie_name)
+
+levels(growthrate_dup$specie_name)
+
+growthrate<- growthrate_dup %>% group_by(specie_name) %>% summarise(growth= mean(value))
+
 #ok now do by genus?
 #process: make long form again, split species into genus, sort out the acropora corymbose etc, split by numeric/ categories./ repeat
 
+#START HERE FOR GENUS LEVEL
+#now read in file edited in excel----
+species_traits<-read.csv('complete_traits_sp.csv')
+
+species_traits<-data.frame( lapply(species_traits, as.character), stringsAsFactors=FALSE)
+
+#actually lets work with wide for now
+#split species into genus and sp.
+genus<-data.frame(do.call(rbind, strsplit(species_traits$specie_name, " ")))
+
+species_traits$genus<- genus$X1
+species_traits$species<-genus$X2
+
+#now split acropora into growth form
+species_traits$genus<-as.character(species_traits$genus)
+
+ac<-species_traits[species_traits$genus=='Acropora',]
+
+unique(ac$Growth.form.typical)
+
+branching<- species_traits[c(which(species_traits$genus=='Acropora' & species_traits$Growth.form.typical=='branching_open')),]
+
+species_traits$genus[c(which(species_traits$genus=='Acropora' & species_traits$Growth.form.typical=='branching_open'))]<-'Acropora_arborescent'
+
+species_traits$genus[c(which(species_traits$genus=='Acropora' & species_traits$Growth.form.typical=="branching_closed"))]<-'Acropora_arborescent'
+
+species_traits$genus[c(which(species_traits$genus=='Acropora' & species_traits$Growth.form.typical=="digitate"))]<-'Acropora_digitate'
+
+species_traits$genus[c(which(species_traits$genus=='Acropora' & species_traits$Growth.form.typical=="corymbose"))]<-'Acropora_corymbose'
+
+species_traits$genus[c(which(species_traits$genus=='Acropora' & species_traits$Growth.form.typical=="hispidose"))]<-'Acropora_thickets'
+
+species_traits$genus[c(which(species_traits$genus=='Acropora' & species_traits$Growth.form.typical=="tables_or_plates"))]<-'Acropora_plate'
+
+which(species_traits$genus=='Acropora' & species_traits$Growth.form.typical=='encrusting') #only 1 should be fine
+
+species_traits$genus[c(which(species_traits$genus=='Acropora' & species_traits$Growth.form.typical=="encrusting"))]<-'Acropora_encrusting'
+
+ac2<-species_traits[species_traits$genus=='Acropora',] #one species without growth form, rare leave this
+
+#now split montipora
+mont<-species_traits[species_traits$genus=='Montipora',]
+unique(mont$Growth.form.typical)
+
+species_traits$genus[c(which(species_traits$genus=='Montipora' & species_traits$Growth.form.typical=="laminar"))]<-'Montipora_lam'
+
+species_traits$genus[c(which(species_traits$genus=='Montipora' & species_traits$Growth.form.typical=="branching_open"))]<-'Montipora_branching'
+
+species_traits$genus[c(which(species_traits$genus=='Montipora' & species_traits$Growth.form.typical=="branching_closed"))]<-'Montipora_branching'
+
+species_traits$genus[c(which(species_traits$genus=='Montipora' & species_traits$Growth.form.typical=="columnar"))]<-'Montipora_columnar'
+
+species_traits$genus[c(which(species_traits$genus=='Montipora' & species_traits$Growth.form.typical=="encrusting_long_uprights"))]<-'Montipora_enc_mass'
+
+species_traits$genus[c(which(species_traits$genus=='Montipora' & species_traits$Growth.form.typical=="massive"))]<-'Montipora_enc_mass'
+
+species_traits$genus[c(which(species_traits$genus=='Montipora' & species_traits$Growth.form.typical=="submassive"))]<-'Montipora_enc_mass'
+
+species_traits$genus[c(which(species_traits$genus=='Montipora' & species_traits$Growth.form.typical=="encrusting"))]<-'Montipora_enc_mass'
+
+species_traits$genus[c(which(species_traits$genus=='Montipora' & species_traits$Growth.form.typical=="digitate" ))]<-'Montipora_branching'
+
+#now astreopora
+ast<-species_traits[species_traits$genus=='Astreopora',]
+unique(ast$Growth.form.typical)
+
+species_traits$genus[c(which(species_traits$genus== 'Astreopora' & species_traits$Growth.form.typical=="laminar"))]<-'Astreopora_laminar'
+
+species_traits$genus[c(which(species_traits$genus== 'Astreopora' & species_traits$Growth.form.typical=="encrusting"))]<-'Astreopora_enc_mass'
+
+species_traits$genus[c(which(species_traits$genus== 'Astreopora' & species_traits$Growth.form.typical=="massive"))]<-'Astreopora_enc_mass'
+
+#hynophora
+hyd<-species_traits[species_traits$genus=='Hydnophora',]
+
+unique(hyd$Growth.form.typical)
+
+species_traits$genus[c(which(species_traits$genus== 'Hydnophora' & species_traits$Growth.form.typical=="digitate"))]<-'Hydnophora_branching'
+
+species_traits$genus[c(which(species_traits$genus== 'Hydnophora' & species_traits$Growth.form.typical=="branching_closed"))]<-'Hydnophora_branching'
+
+species_traits$genus[c(which(species_traits$genus== 'Hydnophora' & species_traits$Growth.form.typical=="massive"))]<-'Hydnophora_enc_mass'
+
+species_traits$genus[c(which(species_traits$genus== 'Hydnophora' & species_traits$Growth.form.typical=="encrusting_long_uprights"))]<-'Hydnophora_enc_mass'
+
+species_traits$genus[c(which(species_traits$genus== 'Hydnophora' & species_traits$Growth.form.typical=="submassive"))]<-'Hydnophora_enc_mass'
+
+#porites 
+por<-species_traits[species_traits$genus=='Porites',]
+
+unique(por$Growth.form.typical)
+
+species_traits$genus[c(which(species_traits$genus=='Porites'  & species_traits$Growth.form.typical=="digitate"))]<-'Porites_branching'
+
+species_traits$genus[c(which(species_traits$genus=='Porites'  & species_traits$Growth.form.typical=="branching_closed"))]<-'Porites_branching'
+
+species_traits$genus[c(which(species_traits$genus=='Porites'  & species_traits$Growth.form.typical=="massive"))]<-'Porites_massive'
+
+species_traits$genus[c(which(species_traits$genus=='Porites'  & species_traits$Growth.form.typical=="encrusting_long_uprights"))]<-'Porites_lam_enc'
+
+species_traits$genus[c(which(species_traits$genus=='Porites'  & species_traits$Growth.form.typical=="laminar"))]<-'Porites_lam_enc'
+
+species_traits$genus[c(which(species_traits$genus=='Porites'  & species_traits$Growth.form.typical=="encrusting"))]<-'Porites_lam_enc'
+
+species_traits$genus[c(which(species_traits$genus=='Porites'  & species_traits$Growth.form.typical=="columnar"))]<-'Porites_massive'
 
 
-      
+#now make all fungidaes into one family
+fun<-species_traits[species_traits$genus=='Cantharellus',]
+
+species_traits$genus[c(which(species_traits$genus=='Cantharellus'))]<-'Fungiidae_family'
+
+fun<-species_traits[species_traits$genus=='Ctenactis',]
+
+species_traits$genus[c(which(species_traits$genus=='Ctenactis'))]<-'Fungiidae_family'
+
+fun<-species_traits[species_traits$genus=='Cycloseris',]
+
+species_traits$genus[c(which(species_traits$genus=='Cycloseris'))]<-'Fungiidae_family'
+
+fun<-species_traits[species_traits$genus=='Danafungia ',] #none
+
+fun<-species_traits[species_traits$genus=='Halomitra',] 
+
+species_traits$genus[c(which(species_traits$genus=='Halomitra'))]<-'Fungiidae_family'
+
+fun<-species_traits[species_traits$genus=='Heliofungia',] 
+
+species_traits$genus[c(which(species_traits$genus=='Heliofungia'))]<-'Fungiidae_family'
+
+fun<-species_traits[species_traits$genus=='Herpolitha',] 
+
+species_traits$genus[c(which(species_traits$genus=='Herpolitha'))]<-'Fungiidae_family'
+
+fun<-species_traits[species_traits$genus=='Lobactis',] #none
+
+fun<-species_traits[species_traits$genus=='Pleuractis',] #none
+
+fun<-species_traits[species_traits$genus=='Polyphyllia',]
+
+species_traits$genus[c(which(species_traits$genus=='Polyphyllia'))]<-'Fungiidae_family'
+
+fun<-species_traits[species_traits$genus=='Sandalolitha',]
+
+species_traits$genus[c(which(species_traits$genus=='Sandalolitha'))]<-'Fungiidae_family'
+
+fun<-species_traits[species_traits$genus=='Sinuorota',] #none
+
+fun<-species_traits[species_traits$genus=='Zoopilus',]
+
+species_traits$genus[c(which(species_traits$genus=='Zoopilus'))]<-'Fungiidae_family'
+
+#ok now it matches the 'genus' groups in brigittes data
+
+
+#make it long form again
+
+#species_traits_long<- gather(species_traits, key='trait_name', value='value') doesnt work
+library(reshape2)
+
+species_traits_long<-melt(species_traits, id.vars = c('specie_name', 'genus') )
+
+#ok now make categories #min and max???? #also mean do both to check 
+
+
+
+
