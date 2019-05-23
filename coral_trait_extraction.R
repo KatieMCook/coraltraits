@@ -437,6 +437,69 @@ species_traits_long<-melt(species_traits, id.vars = c('specie_name', 'genus') )
 
 #ok now make categories #min and max???? #also mean do both to check 
 
+#first remove the rows with NA in the value col #then split into categorical and numeric and group by genus
+
+traits_naless<-species_traits_long[c(!(is.na(species_traits_long$value))),]
+
+#split into numeric and categorical again 
+#which values are categories and which are numbers
+traits_num<-!is.na(as.numeric(traits_naless$value)) #trues are numbers
+
+g_traits_num<-traits_naless[traits_num==TRUE,]
+
+g_traits_cat<-traits_naless[traits_num==FALSE,]
+
+#work on the numeric traits
+#group by and then take min, max and mean
+g_traits_num$genus<-as.factor(g_traits_num$genus)
+g_traits_num$value<-as.numeric(g_traits_num$value)
+
+levels(g_traits_num$genus)
 
 
+genus_traits_num<- g_traits_num %>% group_by(genus, variable) %>% summarise( mean=mean(value), max=max(value), min=min(value))
+genus_traits_num$range<-genus_traits_num$max - genus_traits_num$min
 
+
+#categorical 
+g_traits_cat$cat_val<-1
+head(g_traits_cat)
+
+g_cat_sum<-g_traits_cat %>% group_by(genus, variable, value) %>% summarise(cat_no=sum(cat_val))
+
+#now find repeated cats
+g_cat_sum$dups<-1
+
+head(g_cat_sum)
+
+g_duplicates<- g_cat_sum %>% group_by(genus, variable) %>% mutate(dups=sum(dups))
+
+#check for duplicates
+duplicates<-g_duplicates[c(which(g_duplicates$dups>1)),]
+
+#remove non-duplicates?
+non_dups<-g_duplicates[c(which(!(g_duplicates$dups>1))),]
+
+#merge non_dups with numeric, then export to add in duplicates on excel?
+#make value of numeric traits mean
+head(genus_traits_num)
+names(genus_traits_num)<-c('genus', 'variable', 'value', 'max', 'min', 'range')
+
+genus_traits_num$value<-as.character(genus_traits_num$value)
+
+genus_traits_all<-rbind(non_dups, genus_traits_num)
+
+
+#write long non duplicated traits 
+write.csv(genus_traits_all, 'long_nondup_genus_traits.csv')
+
+#now make it wide
+library(tidyr)
+genus_traits_all$genus<-as.factor(genus_traits_all$genus)
+genus_traits_all$variable<-as.factor(genus_traits_all$variable)
+genus_traits_clean<-genus_traits_all[,c(1:3)]
+
+genus_wide_nondup<-spread(genus_traits_clean, key=variable, value=value)
+
+
+write.csv(genus_wide_nondup, 'genus_trait_uniquecases.csv')
