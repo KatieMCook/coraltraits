@@ -273,9 +273,13 @@ growthrate<- growthrate_dup %>% group_by(specie_name) %>% summarise(growth= mean
 #ok now do by genus?
 #process: make long form again, split species into genus, sort out the acropora corymbose etc, split by numeric/ categories./ repeat
 
-#START HERE FOR GENUS LEVEL
+#START HERE FOR GENUS LEVEL----
 #now read in file edited in excel----
 species_traits<-read.csv('complete_traits_sp.csv')
+species_traits_all<-read.csv('alltraits_sp.csv')
+
+species_traits$Oocyte.size.at.maturity <-species_traits_all$Oocyte.size.at.maturity
+species_traits$Skeletal.density    <-species_traits_all$Skeletal.density
 
 species_traits<-data.frame( lapply(species_traits, as.character), stringsAsFactors=FALSE)
 
@@ -458,8 +462,61 @@ levels(g_traits_num$genus)
 
 
 genus_traits_num<- g_traits_num %>% group_by(genus, variable) %>% summarise( mean=mean(value), max=max(value), min=min(value))
+
 genus_traits_num$range<-genus_traits_num$max - genus_traits_num$min
 
+#make a wide format of the max, then a wide format of the min, add to trait DB and merge
+max<- genus_traits_num[,c(1,2,4)]
+
+max_wide<-spread(max, key=variable, value=max)
+
+min<- genus_traits_num[,c(1,2,5)]
+
+min_wide<-spread(min, key=variable, value=min)
+
+mean<-genus_traits_num[,c(1,2,3)]
+
+mean_wide<-spread(mean, key = variable, value=mean)
+  
+#merge these to make range 
+identical(colnames(min_wide), colnames(max_wide))
+
+colnames(min_wide)
+
+
+test<- data.frame(corallite_width_max_min=min_wide$Corallite.width.maximum, corallite_width_max_max=max_wide$Corallite.width.maximum)
+
+test <- test %>% unite(corallite_width_max_range, corallite_width_max_min, corallite_width_max_max, remove=FALSE, sep='-')
+
+#make them all characters
+#loop
+range<-data.frame(genus=max_wide$genus)
+
+for (i in 1: ncol(min_wide)){
+ test<-data.frame(min=min_wide[,i],max=max_wide[,i])
+ test_range<-test %>% unite(test_range, colnames(test[1]), colnames(test[2]), sep='-')
+ range[,i]<-test_range
+ colnames(range[i])<-colnames(max_wide[i])
+ 
+}
+
+colnames(range)<-colnames(max_wide)
+
+range$genus<-max_wide$genus
+
+write.csv(range, 'num_trait_range.csv')
+
+#rename cols with range
+colnames(range) <- paste( colnames(range),"range", sep = "_")
+
+#replace NA NA with NA
+range[range=='NA-NA']<-NA
+
+#range to add
+head(range)
+range_add<- range[,c(1,2,3,4,5,10,15,16,17)]
+
+range_add<-range_add %>% rename( 'genus'=genus_range)
 
 #categorical 
 g_traits_cat$cat_val<-1
@@ -503,3 +560,60 @@ genus_wide_nondup<-spread(genus_traits_clean, key=variable, value=value)
 
 
 write.csv(genus_wide_nondup, 'genus_trait_uniquecases.csv')
+
+#added the duplicates by eye on excel 
+
+
+###ADDED EGG SIZE AND SKELETAL DENSITY ?? disappeared what
+#(reran from the genus traits long, grouping etc.) oh well
+
+#make a df of species within the genera 
+genus_species<-data.frame(genus=species_traits$genus, species=species_traits$specie_name)
+
+#calculate number of sp. per group
+
+genus_species$number<-1
+
+head(genus_species)
+
+genus_species<- genus_species %>% group_by(genus) %>% mutate(number_sp=sum(number))
+
+genus_species<- genus_species[,-c(3,4)]
+
+#sort by genus alphabetically
+write.csv(genus_species, 'genus_species_list.csv')
+
+#duplicates for larval dev
+which(duplicates$variable=='larval_development')
+lav<-duplicates[duplicates$variable=='larval_development',]
+
+
+#read in summarised df (sent to brigitte - needs to be this one as modified on excel)
+#read in orginal wide (non duplicated, add min and max of depth range )
+traitsDB_con<-read.csv('coralDB_2405_condensed.csv')
+
+traitsDB<-read.csv('coralDB_2305.csv')
+
+identical(traitsDB$genus, traitsDB_con$genus)
+
+traitsDB_con$Corallite.width.minimum<-traitsDB$Corallite.width.minimum
+traitsDB_con$Depth.lower<-traitsDB$Depth.lower
+traitsDB_con$Depth.upper<-traitsDB$Depth.upper
+
+#now add the range file we created
+traitsDB_final<-left_join(traitsDB_con, range_add, by='genus')
+
+#now add on brigittes grwoth forms 
+growth_form<-read.csv('Japan_Coral_CPCe_morphs.csv')
+
+growth_form<-growth_form[,c(1,3)]
+
+growth_form<-growth_form %>% rename('genus'=Taxa, 'Morphology_CPCe'=Morphology)
+
+
+traitsDB_final <-left_join(traitsDB_final, growth_form, by='genus')
+
+traitsDB_final$oocyte_size<-mean_wide$Oocyte.size.at.maturity
+traitsDB_final$skeletal_density<-mean_wide$Skeletal.density
+
+write.csv(traitsDB_final, 'coralDB_2705_withrange.csv')
